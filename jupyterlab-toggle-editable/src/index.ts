@@ -1,17 +1,27 @@
-import {
-  JupyterFrontEnd, JupyterFrontEndPlugin
-} from '@jupyterlab/application';
+import { JupyterFrontEnd, JupyterFrontEndPlugin } from '@jupyterlab/application';
+import { INotebookTools } from '@jupyterlab/notebook';
 
-
-/**
- * Initialization data for the jupyterlab-toggle-editable extension.
- */
-const extension: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab-toggle-editable',
-  autoStart: true,
-  activate: (app: JupyterFrontEnd) => {
-    console.log('JupyterLab extension jupyterlab-toggle-editable is activated!');
-  }
+const plugin: JupyterFrontEndPlugin<void> = {
+	activate,
+	id: 'jupyterlab-toggle-editable:buttonPlugin',
+	requires: [INotebookTools],
+	autoStart: true
 };
 
-export default extension;
+function activate (app: JupyterFrontEnd, cellTools: INotebookTools) {
+	const commandID = 'toggle-editable';
+	app.commands.addCommand(commandID, {
+		label: 'Toggle Read Only',
+		execute: () => {
+			let activeCell = cellTools.activeCell;
+			activeCell.readOnly = !activeCell.readOnly;
+		}
+	});
+
+	app.contextMenu.addItem({
+		command: commandID,
+		selector: '.jp-Cell'
+	});
+}
+
+export default plugin;
