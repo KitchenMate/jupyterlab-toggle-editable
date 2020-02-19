@@ -1,0 +1,8 @@
+{
+  "name": "jupyterlab-toggle-editable",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/KitchenMate/jupyterlab-toggle-editable.git",
+  "author": "lucaszw <lucas.zeer@gmail.com>",
+  "license": "MIT"
+}
