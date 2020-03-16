@@ -1,6 +1,6 @@
 {
   "name": "jupyterlab-toggle-editable",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Toggle ability to edit cell in notebook",
   "keywords": [
     "jupyter",
@@ -32,7 +32,11 @@
   },
   "dependencies": {
     "@jupyterlab/application": "^2.0.1",
-    "@jupyterlab/notebook": "^2.0.1"
+    "@jupyterlab/apputils": "^2.0.2",
+    "@jupyterlab/docregistry": "^2.0.2",
+    "@jupyterlab/notebook": "^2.0.1",
+    "@lumino/widgets": "^1.11.1",
+    "react": "16.9.0"
   },
   "devDependencies": {
     "rimraf": "^2.6.1",
