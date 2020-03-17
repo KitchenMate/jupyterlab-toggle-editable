@@ -1,102 +1,81 @@
 import {JupyterFrontEnd, JupyterFrontEndPlugin} from '@jupyterlab/application';
-import {INotebookTools, NotebookPanel, INotebookModel} from '@jupyterlab/notebook';
+import {NotebookPanel, INotebookModel} from '@jupyterlab/notebook';
 import { DocumentRegistry} from '@jupyterlab/docregistry';
 import React from 'react';
 import { ReactWidget} from '@jupyterlab/apputils';
+import {IDocumentManager} from '@jupyterlab/docmanager';
 
 const plugin: JupyterFrontEndPlugin<void> = {
 	activate,
-	id: 'jupyterlab-toggle-editable:buttonPlugin',
-	requires: [NotebookPanel.IContentFactory, INotebookTools],
+	id: 's3-versioned-notebooks:dropdownPlugin',
+	requires: [NotebookPanel.IContentFactory, IDocumentManager],
 	autoStart: true
 };
 
-export class MyDropdown extends ReactWidget {
-	constructor(panel: NotebookPanel) {
+export class S3VersionControl extends ReactWidget {
+	constructor(panel: NotebookPanel, docManager: IDocumentManager) {
 		super();
-		console.log({panel});
-		this.panel = panel;	
+		this.panel = panel;
+		this.docManager = docManager;
 		this.panel.model.metadata.changed.connect(this.metadataChanged, this);
 		this.versions = [];
-		this.activeVersion = {};
 	}
 	private panel: NotebookPanel;
+	private docManager: IDocumentManager;
 	public versions: any;
-	public activeVersion: any;
+	public requestedVersion: any;
+	public latestVersion: any;
+	public currentVersion: any;
+
 	metadataChanged(sender: any, args: any) {
 		let versions = this.panel.model.metadata.get("s3_versions");
-		this.activeVersion = this.panel.model.metadata.get("s3_active_version") || {};
-		console.log({activeVersion: this.activeVersion});
+		this.requestedVersion = this.panel.model.metadata.get("s3_requested_version");
+		this.latestVersion = this.panel.model.metadata.get("s3_latest_version");
+		this.currentVersion = this.panel.model.metadata.get("s3_current_version");
 		if (!versions) return;
 		this.versions = versions;
-		console.log("METADATA CHANGED....");
 		this.update();
 	}
-	versionSelected(version: any) {
-		this.panel.model.metadata.set("s3_active_version", version);
+	async versionSelected(version: any) {
+		this.panel.model.metadata.set("s3_requested_version", version['version_id']);
+		await this.panel.context.save();
+		await this.closeDocument();
+	}
+	async closeDocument() {
+		await this.panel.context.sessionContext.shutdown()
+		this.panel.dispose();
+		this.docManager.open(this.panel.context.path, 'notebook');
 	}
 	render() {
-		console.log("Rendering...");
-		console.log(this.versions);
 		const options = this.versions.map((version: any) => {
-			console.log({activeVersion: this.activeVersion, version});
 			return(
 				<option key={version.version_id} value={version.version_id} onClick={this.versionSelected.bind(this, version)}>
 					{version.timestamp}
 				</option>
 			);
 		});
-		console.log("LENGTH: ", options.length)
-		if (options.length == 0) {
-			return (<b>{options.length}</b>)
-		} else {
-			return (<select value={this.activeVersion.version_id}>{options}</select>)	
-		}
+		return (<div>
+			<select value={this.requestedVersion}>{options}</select>
+		</div>)	
 	}
 }
 
 class VersionSelectDropdownExtension implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
-	constructor(app: JupyterFrontEnd) {
+	constructor(app: JupyterFrontEnd, docManager: IDocumentManager) {
 		this.app = app;
+		this.docManager = docManager;
 	}
 	readonly app: JupyterFrontEnd;
+	readonly docManager: IDocumentManager;
 	createNew(panel: NotebookPanel, context: DocumentRegistry.IContext<INotebookModel>): any {
-		// const versionDropdown = new ToolbarButton({
-		// 	className: 'versionSelectDropdown',
-		// 	iconClass: 'fa fa-fast-forward',
-		// 	onClick: () => {
-		// 		console.log("Version Dropdown Clicked!")
-		// 	},
-		// 	tooltip: 'Run All Cells'
-		// });
-		const myDropdown = new MyDropdown(panel);
-		panel.toolbar.insertItem(6, 'test', myDropdown);
-		console.log({panel});
-		// panel.toolbar.insertItem(6, 'versionSelectDropdown', versionDropdown);
+		const s3VersionControl = new S3VersionControl(panel, this.docManager);
+		panel.toolbar.insertItem(6, 'version_control', s3VersionControl);
 	}
 }
 
-function activate (app: JupyterFrontEnd, cellTools: INotebookTools, panel: NotebookPanel) {
-
-	const commandID = 'toggle-editable';
-	console.log({cellTools});
-	const dropdownExtension = new VersionSelectDropdownExtension(app);
+function activate (app: JupyterFrontEnd, panel: NotebookPanel, docManager: IDocumentManager) {
+	const dropdownExtension = new VersionSelectDropdownExtension(app, docManager);
 	app.docRegistry.addWidgetExtension('Notebook', dropdownExtension);
-	app.commands.addCommand(commandID, {
-		label: 'Toggle Read Only',
-		execute: () => {
-			console.log({app})
-			let activeCell = cellTools.activeCell;
-			activeCell.readOnly = !activeCell.readOnly;
-		}
-	});
-	
-	app.contextMenu.addItem({
-		command: commandID,
-		selector: '.jp-Cell'
-	});
-
-	console.log({app})
 }
 
 export default plugin;
