@@ -1,15 +1,15 @@
 {
-  "name": "jupyterlab-toggle-editable",
+  "name": "jupyterlab-s3-versioned-notebooks",
   "version": "0.1.1",
-  "description": "Toggle ability to edit cell in notebook",
+  "description": "Move between various s3 versions of a notebook ",
   "keywords": [
     "jupyter",
     "jupyterlab",
     "jupyterlab-extension"
   ],
-  "homepage": "https://github.com/KitchenMate/jupyterlab-toggle-editable",
+  "homepage": "https://github.com/KitchenMate/jupyterlab-s3-versioned-notebooks",
   "bugs": {
-    "url": "https://github.com/KitchenMate/jupyterlab-toggle-editable/issues"
+    "url": "https://github.com/KitchenMate/jupyterlab-s3-versioned-notebooks/issues"
   },
   "license": "BSD-3-Clause",
   "author": "KitchenMate",
@@ -22,7 +22,7 @@
   "style": "style/index.css",
   "repository": {
     "type": "git",
-    "url": "https://github.com/KitchenMate/jupyterlab-toggle-editable.git"
+    "url": "https://github.com/KitchenMate/jupyterlab-s3-versioned-notebooks.git"
   },
   "scripts": {
     "build": "tsc",
