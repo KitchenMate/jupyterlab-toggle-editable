@@ -14,30 +14,43 @@ const plugin: JupyterFrontEndPlugin<void> = {
 export class MyDropdown extends ReactWidget {
 	constructor(panel: NotebookPanel) {
 		super();
+		console.log({panel});
 		this.panel = panel;	
 		this.panel.model.metadata.changed.connect(this.metadataChanged, this);
 		this.versions = [];
+		this.activeVersion = {};
 	}
 	private panel: NotebookPanel;
 	public versions: any;
+	public activeVersion: any;
 	metadataChanged(sender: any, args: any) {
 		let versions = this.panel.model.metadata.get("s3_versions");
+		this.activeVersion = this.panel.model.metadata.get("s3_active_version") || {};
+		console.log({activeVersion: this.activeVersion});
 		if (!versions) return;
 		this.versions = versions;
 		console.log("METADATA CHANGED....");
 		this.update();
 	}
+	versionSelected(version: any) {
+		this.panel.model.metadata.set("s3_active_version", version);
+	}
 	render() {
 		console.log("Rendering...");
 		console.log(this.versions);
 		const options = this.versions.map((version: any) => {
-			return <option key={version[0]} value={version[0]}>{version[1]}</option>
+			console.log({activeVersion: this.activeVersion, version});
+			return(
+				<option key={version.version_id} value={version.version_id} onClick={this.versionSelected.bind(this, version)}>
+					{version.timestamp}
+				</option>
+			);
 		});
 		console.log("LENGTH: ", options.length)
 		if (options.length == 0) {
 			return (<b>{options.length}</b>)
 		} else {
-			return (<select id="cars">{options}</select>)	
+			return (<select value={this.activeVersion.version_id}>{options}</select>)	
 		}
 	}
 }
