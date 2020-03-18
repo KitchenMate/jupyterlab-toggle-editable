@@ -37,6 +37,8 @@
     "@jupyterlab/docregistry": "^2.0.2",
     "@jupyterlab/notebook": "^2.0.1",
     "@lumino/widgets": "^1.11.1",
+    "@types/lodash": "^4.14.149",
+    "lodash": "^4.17.15",
     "react": "16.9.0"
   },
   "devDependencies": {

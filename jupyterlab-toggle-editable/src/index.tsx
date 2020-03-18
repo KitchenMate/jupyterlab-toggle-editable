@@ -2,6 +2,8 @@ import {JupyterFrontEnd, JupyterFrontEndPlugin} from '@jupyterlab/application';
 import {NotebookPanel, INotebookModel} from '@jupyterlab/notebook';
 import { DocumentRegistry} from '@jupyterlab/docregistry';
 import React from 'react';
+import _ from 'lodash';
+
 import { ReactWidget} from '@jupyterlab/apputils';
 import {IDocumentManager} from '@jupyterlab/docmanager';
 
@@ -26,7 +28,7 @@ export class S3VersionControl extends ReactWidget {
 	public requestedVersion: any;
 	public latestVersion: any;
 	public currentVersion: any;
-
+	public selectedRelease: any;
 	metadataChanged(sender: any, args: any) {
 		let versions = this.panel.model.metadata.get("s3_versions");
 		this.requestedVersion = this.panel.model.metadata.get("s3_requested_version");
@@ -39,25 +41,67 @@ export class S3VersionControl extends ReactWidget {
 	async versionSelected(version: any) {
 		this.panel.model.metadata.set("s3_requested_version", version['version_id']);
 		await this.panel.context.save();
-		await this.closeDocument();
+		await this.reloadDocument();
 	}
-	async closeDocument() {
+	async reloadDocument() {
 		await this.panel.context.sessionContext.shutdown()
 		this.panel.dispose();
 		this.docManager.open(this.panel.context.path, 'notebook');
 	}
+	getReleaseTagForVersion(version: any): string {
+		return _.get(_.find(version.tags, {Key: "release"}), "Value");
+	}
+	getReleaseMessageForVersion(version: any): string {
+		return _.get(_.find(version.tags, {Key: "message"}), "Value");
+	}
+	async createRelease() {
+		let msg: string = prompt("Please enter a release message", "new release");
+		this.panel.model.metadata.set("s3_create_release", msg);
+		await this.panel.context.save();
+		await this.reloadDocument();
+	}
+	selectRelease(k: string) {
+		this.selectedRelease = k;
+		this.update();
+	}
 	render() {
-		const options = this.versions.map((version: any) => {
-			return(
+		let unlistedVersions: any[] = [];
+		let groupedVersions: any = {};
+		let selectedGroup: string = "";
+
+		_.each(this.versions, (version) => {
+			let release = this.getReleaseTagForVersion(version);
+			let message = this.getReleaseMessageForVersion(version);
+			let option = (
 				<option key={version.version_id} value={version.version_id} onClick={this.versionSelected.bind(this, version)}>
 					{version.timestamp}
 				</option>
 			);
+
+			if (release) {
+				let key = `${release}-${message||'release'}`;
+				if (_.indexOf(_.map(unlistedVersions, "key"), this.requestedVersion) != -1) {
+					selectedGroup = key;
+				}
+				groupedVersions[key] = unlistedVersions;
+				unlistedVersions = [];
+			}
+			unlistedVersions.push(option);
+		});
+
+		groupedVersions['untagged'] = unlistedVersions;
+		groupedVersions['all'] = _.flatten(_.values(groupedVersions));
+
+		let releaseOptions = _.map(_.keys(groupedVersions), (k: any) => {
+			return (<option key={k} onClick={this.selectRelease.bind(this, k)}>{k}</option>);
 		});
 		return (<div>
-			<select value={this.requestedVersion}>{options}</select>
+			<select value={this.selectedRelease || selectedGroup || "all"}>{releaseOptions}</select>
+			<select value={this.requestedVersion}>{groupedVersions[this.selectedRelease || selectedGroup || "all"]}</select>
+			<button onClick={this.createRelease.bind(this)}>New Release</button>
 		</div>)	
 	}
+
 }
 
 class VersionSelectDropdownExtension implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel> {
